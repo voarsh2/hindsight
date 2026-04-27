@@ -50,6 +50,7 @@ jobs:
       integrations-cloudflare-oauth-proxy: ${{ steps.filter.outputs.integrations-cloudflare-oauth-proxy }}
       integrations-lockfiles: ${{ steps.filter.outputs.integrations-lockfiles }}
       integrations-openai-agents: ${{ steps.filter.outputs.integrations-openai-agents }}
+      integrations-smolagents: ${{ steps.filter.outputs.integrations-smolagents }}
       dev: ${{ steps.filter.outputs.dev }}
       ci: ${{ steps.filter.outputs.ci }}
       # Secrets are available for internal PRs, pull_request_review, and workflow_dispatch.
@@ -136,6 +137,8 @@ jobs:
             - 'scripts/check-integration-lockfiles.sh'
           integrations-openai-agents:
             - 'hindsight-integrations/openai-agents/**'
+          integrations-smolagents:
+            - 'hindsight-integrations/smolagents/**'
           dev:
             - 'hindsight-dev/**'
           ci:
@@ -1898,6 +1901,43 @@ jobs:
       working-directory: ./hindsight-integrations/ag2
       run: uv run pytest tests -v
 
+  test-smolagents-integration:
+    needs: [detect-changes]
+    if: >-
+      github.event_name != 'pull_request_review' &&
+      (github.event_name == 'workflow_dispatch' ||
+      needs.detect-changes.outputs.integrations-smolagents == 'true' ||
+      needs.detect-changes.outputs.ci == 'true')
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        ref: ${{ github.event.pull_request.head.sha || '' }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+        prune-cache: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version-file: ".python-version"
+
+    - name: Build smolagents integration
+      working-directory: ./hindsight-integrations/smolagents
+      run: uv build
+
+    - name: Install dependencies
+      working-directory: ./hindsight-integrations/smolagents
+      run: uv sync --frozen
+
+    - name: Run tests
+      working-directory: ./hindsight-integrations/smolagents
+      run: uv run pytest tests -v
+
   test-crewai-integration:
     needs: [detect-changes]
     if: >-
@@ -2923,6 +2963,7 @@ jobs:
       - test-openclaw-integration
       - test-integration
       - test-ag2-integration
+      - test-smolagents-integration
       - test-crewai-integration
       - test-litellm-integration
       - test-pydantic-ai-integration
