@@ -126,8 +126,10 @@ def _read_transcript_text(transcript_path: str) -> list:
                             role = payload.get("role", "")
                             if role not in ("user", "assistant"):
                                 continue
-                            # Only include final_answer for assistant (not reasoning/intermediary)
-                            if role == "assistant" and payload.get("phase") != "final_answer":
+                            # Current Codex runtimes may omit phase for assistant finals.
+                            # Keep explicit non-final phases filtered out, but treat a missing
+                            # phase the same as final output for compatibility.
+                            if role == "assistant" and payload.get("phase") not in (None, "final_answer"):
                                 continue
                             content_blocks = payload.get("content", [])
                             text_parts = []
@@ -213,8 +215,10 @@ def _read_transcript_rich(transcript_path: str) -> list:
                             if text:
                                 messages.append({"role": "user", "content": [{"type": "text", "text": text}]})
                         elif role == "assistant":
-                            # Only include final_answer (not reasoning/intermediary)
-                            if payload.get("phase") != "final_answer":
+                            # Current Codex runtimes may omit phase for assistant finals.
+                            # Keep explicit non-final phases filtered out, but treat a missing
+                            # phase the same as final output for compatibility.
+                            if payload.get("phase") not in (None, "final_answer"):
                                 continue
                             text = _extract_text_from_content_blocks(payload.get("content", []))
                             if text:

@@ -139,6 +139,22 @@ class TestReadTranscriptCodexFormat:
         assert len(msgs) == 1
         assert msgs[0]["content"] == "The answer is 42."
 
+    def test_accepts_assistant_message_when_phase_is_missing(self, tmp_path):
+        entries = [
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": "Answer without phase."}],
+                },
+            },
+        ]
+        path = _write_jsonl(tmp_path, entries)
+        msgs = read_transcript(path)
+        assert len(msgs) == 1
+        assert msgs[0] == {"role": "assistant", "content": "Answer without phase."}
+
     def test_skips_non_message_response_items(self, tmp_path):
         entries = [
             {"type": "response_item", "payload": {"type": "tool_call", "name": "Bash"}},
@@ -672,6 +688,23 @@ class TestReadTranscriptRich:
         msgs = read_transcript(path, include_tool_calls=True)
         assert len(msgs) == 1
         assert msgs[0]["content"][0]["text"] == "The answer"
+
+    def test_accepts_assistant_message_with_missing_phase_in_rich_mode(self, tmp_path):
+        entries = [
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"type": "output_text", "text": "Answer without phase."}],
+                },
+            },
+        ]
+        path = _write_jsonl(tmp_path, entries)
+        msgs = read_transcript(path, include_tool_calls=True)
+        assert len(msgs) == 1
+        assert msgs[0]["role"] == "assistant"
+        assert msgs[0]["content"] == [{"type": "text", "text": "Answer without phase."}]
 
     def test_flat_format_works_in_rich_mode(self, tmp_path):
         path = _write_jsonl(tmp_path, [
